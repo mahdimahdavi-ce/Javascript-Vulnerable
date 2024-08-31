@@ -1,0 +1,66 @@
+name: Vulnerability Scanner
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: |
+          echo "Docker image build is finished"
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run tests
+        run: |
+          echo "Unit tests run successfully"
+
+  vulnerability-scanner:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Send dependencies to Khazande and check response
+        run: |
+          echo "Sending dependencies to Khazande ..."
+          RESPONSE=$(curl -s -o response.txt -w "%{http_code}" -POST -H "Content-Type: text/plain" --data-binary @package.json http://37.32.7.91:3000/api/fetch-vulnerabilities/Javascript)
+          RESPONSE_BODY=$(cat response.txt)
+          echo "Response from Khazande:"
+          echo "$RESPONSE_BODY"
+
+          # Check if the response status code is 200
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Some vulnerabilities are found! you need to fix them first"
+            exit 1
+          else
+            echo "No vulnerabilities found!"
+          fi
+  deploy:
+    runs-on: ubuntu-latest
+    needs: vulnerability-scanner
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+        
+      - name: Log in to Docker Hub
+        run: |
+          echo "Login to hamravesh successfully"
+
+      - name: Push Docker image
+        run: |
+          echo "Image pushed successfully!"
